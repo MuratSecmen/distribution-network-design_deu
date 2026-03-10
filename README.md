@@ -66,7 +66,7 @@ Min Z = Transportation Cost
 
 ```
 📁 distribution-network-design/
-├── 📄 README.md                          ← This file
+├── 📄 README.md
 │
 ├── 📁 model/
 │   ├── distribution_network.py
