@@ -21,7 +21,7 @@ This study addresses the **multi-period, multi-modal distribution network design
 [Suppliers]          [Factories]     [Distribution]    [Markets]
                                         Center
 Russia (T1) ──┐                    ┌─────────────┐──→ Finland (M1)
-              ├──→ Spain (F1) ──→  │  Ukraine    │──→ Turkey  (M2)
+              ├──→ Spain (F1) ──→  │  Ukraine    │──→ Turkiye  (M2)
 Germany (T2)──┤                    │    (DM)     │──→ Russia  (M3)
               └──→ Russia (F2) ──→ └─────────────┘
 Norway (T3) ──┘
@@ -83,9 +83,7 @@ Min Z = Transportation Cost
 │
 └── 📁 docs/
     └── paper.pdf                         ← Published paper (Beykoz Akademi, 2015)
-```
 
----
 
 ## Solvers & Dependencies
 
@@ -140,7 +138,7 @@ in IBM ILOG CPLEX Optimization Studio and run.
 **Murat Seçmen**  
 M.Sc. Logistics Engineering — Dokuz Eylül University  
 Production Planning & Control Lead Engineer — Turkish Aerospace Industries (TUSAŞ)  
-Ph.D. Candidate — Industrial Engineering, Hacettepe University  
+M.Sc. Candidate — Industrial Engineering, Hacettepe University  
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-muratsecmen-blue?logo=linkedin)](https://linkedin.com/in/muratsecmen)
 [![GitHub](https://img.shields.io/badge/GitHub-MuratSecmen-black?logo=github)](https://github.com/MuratSecmen)
