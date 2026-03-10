@@ -69,20 +69,20 @@ Min Z = Transportation Cost
 ├── 📄 README.md                          ← This file
 │
 ├── 📁 model/
-│   ├── distribution_network.py           ← Gurobi (Python) implementation
-│   ├── distribution_network.mod          ← IBM CPLEX OPL implementation
-│   └── distribution_network.dat          ← CPLEX OPL data file
+│   ├── distribution_network.py
+│   ├── distribution_network.mod
+│   └── distribution_network.dat
 │
 ├── 📁 data/
-│   ├── parameters.xlsx                   ← All model parameters (Excel)
-│   ├── transportation_costs.xlsx         ← Cost matrices C_ijtp
-│   └── optimal_solution.xlsx            ← Optimal variable values
+│   ├── parameters.xlsx
+│   ├── transportation_costs.xlsx
+│   └── optimal_solution.xlsx
 │
 ├── 📁 results/
-│   └── solution_summary.md              ← Interpretation of results
+│   └── solution_summary.md
 │
 └── 📁 docs/
-    └── paper.pdf                         ← Published paper (Beykoz Akademi, 2015)
+    └── paper.pdf
 
 
 ## Solvers & Dependencies
