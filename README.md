@@ -1,6 +1,6 @@
 # Distribution Network Design and Optimization in a Supply Chain
 
-[![Published](https://img.shields.io/badge/Published-Beykoz%20Akademi%20Dergisi%202015-blue)](https://dergipark.org.tr/tr/pub/bad)
+[![Published](https://img.shields.io/badge/Published-Beykoz%20Akademi%20Dergisi%202015-blue)](https://dergipark.org.tr/en/download/article-file/949560)
 [![Language](https://img.shields.io/badge/Solver-IBM%20CPLEX%20%7C%20Gurobi-orange)]()
 [![Model](https://img.shields.io/badge/Model-Linear%20Programming-green)]()
 [![University](https://img.shields.io/badge/University-Dokuz%20Eyl%C3%BCl%20University-red)]()
@@ -21,7 +21,7 @@ This study addresses the **multi-period, multi-modal distribution network design
 [Suppliers]          [Factories]     [Distribution]    [Markets]
                                         Center
 Russia (T1) ──┐                    ┌─────────────┐──→ Finland (M1)
-              ├──→ Spain (F1) ──→  │  Ukraine    │──→ Turkiye  (M2)
+              ├──→ Spain (F1) ──→  │  Ukraine    │──→ Türkiye  (M2)
 Germany (T2)──┤                    │    (DM)     │──→ Russia  (M3)
               └──→ Russia (F2) ──→ └─────────────┘
 Norway (T3) ──┘
