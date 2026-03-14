@@ -1,37 +1,3 @@
-"""
-Tedarik Zincirinde Dagitim Aglari Tasarimi Uzerine Bir Uygulama
-================================================================
-Beykoz Akademi Dergisi, 2015; 3(1), 67-84
-Secmen, Oncan, Tuna
-
-Ag Yapisi:
-    Tedarikciler : T1=Rusya (i=1), T2=Almanya (i=2), T3=Norvec (i=3)
-    Fabrikalar   : F1=Ispanya (j=1), F2=Rusya (j=2)
-    Dag. Merkezi : Ukrayna (tek DC)
-    Musteriler   : M1=Finlandiya (k=1), M2=Turkiye (k=2), M3=Rusya (k=3)
-    Modlar       : t=1 Tren, t=2 Kara, t=3 Deniz
-    Donemler     : p=1..6
-
-Karar Degiskenleri:
-    X_ijtp : Ted.i -> Fab.j, mod t, donem p
-    W_jp   : Fab.j -> DC, donem p
-    Y_kp   : DC -> Musteri k, donem p
-    B_kp   : Karsilanamayan talep, musteri k, donem p  (p=0..6)
-    Q_p    : DC donem sonu stok miktari  (p=0..6)
-
-Parametreler makaledeki degerlere gore:
-    Fj = 1  (fabrika->DC teslimat suresi, donem)
-    Gk = 2  (DC->musteri teslimat suresi, donem)
-    pi = 0.10  (firsat maliyeti katsayisi)
-    Q0 = 40.000  (baslangic DC stoku)
-
-Giris dosyalari (script ile ayni klasorde olmali):
-    parameters.xlsx           -> kapasite, talep, maliyet, skaler
-    transportation_costs.xlsx -> C_ijtp tasima maliyet matrisi
-
-Referans: Min Z = 922,396.5  (Secmen et al. 2015, CPLEX)
-"""
-
 import gurobipy as gp
 from gurobipy import GRB
 import pandas as pd
@@ -69,11 +35,11 @@ def read_block(df, row_slice, col_slice):
 #     Satir 2: pi  | Satir 3: Q0  | Satir 6: Z* referans
 # =========================================================================
 df_sc   = xl_p.parse("SCALAR_PARAMS", header=None)
-pi_rate = float(df_sc.iloc[2, 2])   # 0.10
-Q_init  = float(df_sc.iloc[3, 2])   # 40000
-Fj      = int(df_sc.iloc[4, 2])     # 1  (fabrika->DC gecikme donemi)
-Gk      = int(df_sc.iloc[5, 2])     # 2  (DC->musteri gecikme donemi)
-Z_ref   = float(df_sc.iloc[6, 2])   # 922396.5
+pi_rate = float(df_sc.iloc[2, 2])
+Q_init  = float(df_sc.iloc[3, 2])
+Fj      = int(df_sc.iloc[4, 2])
+Gk      = int(df_sc.iloc[5, 2])
+Z_ref   = float(df_sc.iloc[6, 2])
 
 print(f"\n  pi={pi_rate}  Q0={Q_init:,.0f}  Fj={Fj}  Gk={Gk}  Z*={Z_ref:,.1f}")
 
@@ -231,22 +197,6 @@ Q = {p: model.addVar(lb=0.0, name=f"Q{p}") for p in periods_ext}
 
 model.update()
 
-# -------------------------------------------------------------------------
-#  Amac Fonksiyonu
-#
-#  Kaynak: Denk. (1), Secmen et al. (2015)
-#
-#  Min Z = [trans] + [W tasima] + [Y tasima] + [firsat]
-#         + [stok elde tutma] + [yok satma]
-#
-#  NOT: Makaledeki orijinal hold/stock ifadesi
-#       R[p]*(ΣW_j(p-Fj) - ΣY_k(p+Gk) - ΣB_k(p+Gk-1) + Q_(p-1))
-#       + T[p]*(ΣY_k(p+Gk) + ΣB_k(p+Gk-1) - ΣW_j(p-Fj) - Q_(p-1))
-#  P4'te R[4]-T[4] = 10-30 = -20 < 0 oldugu icin bu formul sinirsizdır.
-#  Esdeger ve sinirli formul: holding = R[p]*Q[p], stockout = T[p]*B_kp
-#  (Q[p] <= c_p kısıtıyla sinirli; B_kp >= 0 ile sinirli)
-# -------------------------------------------------------------------------
-
 # (1) Tedarikci -> Fabrika tasima
 obj_trans = gp.quicksum(
     C[i, j, t, p] * X[i, j, t, p]
@@ -275,11 +225,6 @@ model.setObjective(
     obj_trans + obj_w + obj_y + obj_opp + obj_hold + obj_stock,
     GRB.MINIMIZE
 )
-
-# -------------------------------------------------------------------------
-#  Kisitlar
-# -------------------------------------------------------------------------
-
 # C1 — Tedarikci kapasite kisiti  (Denklem 2.1)
 #       Σ_j Σ_t X_ijtp <= alpha_ip   ∀ i, p
 for i in suppliers:
@@ -353,15 +298,8 @@ for p in periods:
 #       Q_p <= c_p   ∀ p  (c_p = 40.000 tum donemler icin)
 for p in periods:
     model.addConstr(Q[p] <= c_cap[p], name=f"Qub_{p}")
-
-# =========================================================================
-#  COZUM
-# =========================================================================
 model.optimize()
 
-# =========================================================================
-#  SONUCLAR — TABLO 1 FORMATI (Secmen et al. 2015)
-# =========================================================================
 if model.status == GRB.OPTIMAL:
     Z_opt = model.ObjVal
 
@@ -398,7 +336,6 @@ if model.status == GRB.OPTIMAL:
             if v > 0.5:
                 col_QB.append((f"B{k}{p}", int(round(v))))
 
-    # --- Tablo 1 yazdir ---------------------------------------------------
     C1, C2 = 10, 9
 
     def _cell(pair):
