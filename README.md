@@ -138,12 +138,6 @@ distribution-network-design_deu/
 
 ---
 
-## Yazar
-
-**Murat Seçmen**  
-M.Sc. Lojistik Mühendisliği — Dokuz Eylül Üniversitesi  
-Üretim Planlama & Kontrol Baş Mühendisi — TUSAŞ  
-M.Sc. Adayı — Endüstri Mühendisliği, Hacettepe Üniversitesi  
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-muratsecmen-blue?logo=linkedin)](https://linkedin.com/in/muratsecmen)
 [![GitHub](https://img.shields.io/badge/GitHub-MuratSecmen-black?logo=github)](https://github.com/MuratSecmen)
