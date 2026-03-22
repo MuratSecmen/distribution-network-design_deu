@@ -13,9 +13,7 @@
 
 ## Problem Tanımı
 
-Bu çalışma, çok dönemli çok ürünlü bir tedarik zinciri ağında **dağıtım merkezi yatırım kararları**, 
-**açma/kapama kararları** ve **çok modlu ürün akış optimizasyonu**nu eş zamanlı ele alan bir 
-MILP modeli sunmaktadır.
+Bu çalışma, çok dönemli çok ürünlü bir tedarik zinciri ağında **dağıtım merkezi yatırım kararları**, **açma/kapama kararları** ve **çok modlu ürün akış optimizasyonu**nu eş zamanlı ele alan bir MILP modeli sunmaktadır.
 
 ### Ağ Yapısı
 ```
@@ -53,7 +51,7 @@ Planlama ufku:  4 dönem (takvim çeyrekleri)
 ## Amaç Fonksiyonu
 ```
 Min Z = Taşıma Maliyeti
-      + Üretim Maliyeti  
+      + Üretim Maliyeti
       + Envanter Tutma Maliyeti
       + Backlog Ceza Maliyeti
       + DM Yatırım Maliyeti
@@ -117,11 +115,6 @@ cd extended_model
 python main.py
 ```
 
-### Çıktı
-
-Model çözüm sonuçları `output/` klasörüne Excel formatında yazılır (10 sayfa):
-optimal akış değerleri, DM kararları, dönem bazlı maliyetler, Gurobi solve özeti.
-
 ---
 
 ## Repo Yapısı
@@ -131,19 +124,15 @@ distribution-network-design_deu/
 │   ├── main.py                     # Model + solver
 │   ├── parameters.xlsx             # 9 sayfalık parametre seti
 │   └── transportation_costs.xlsx   # Maliyet matrisi
-├── output/                         # Otomatik oluşturulan sonuçlar
+├── results/
+│   ├── milp_solution.xlsx          # MILP çözüm detayları
+│   └── optimal_solution.xlsx       # Optimal çözüm özeti
 ├── LICENSE                         # MIT
 └── README.md
 ```
 
 ---
 
-## Yazar
-
-**Murat Seçmen**  
-M.Sc. Lojistik Mühendisliği — Dokuz Eylül Üniversitesi  
-Üretim Planlama & Kontrol Baş Mühendisi — TUSAŞ  
-M.Sc. Adayı — Endüstri Mühendisliği, Hacettepe Üniversitesi  
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-muratsecmen-blue?logo=linkedin)](https://linkedin.com/in/muratsecmen)
 [![GitHub](https://img.shields.io/badge/GitHub-MuratSecmen-black?logo=github)](https://github.com/MuratSecmen)
