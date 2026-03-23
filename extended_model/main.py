@@ -1,20 +1,3 @@
-"""
-=========================================================================
-Multi-Period Supply Chain Network Optimization  (Extended MILP)
-=========================================================================
-Reference :  Seçmen, M., Öncan, T. & Tuna, O. (2015).
-             "Çok Dönemli Dağıtım Ağı Tasarımı için Bir MILP Modeli."
-             Beykoz Akademi Dergisi, 3(1), 1-28.
-
-Extension  :  Multi-product · Multi-DC with dynamic open/close decisions
-              Geographic transportation-mode feasibility filter
-              Gurobi solver (v10+)
-
-Author     :  Murat Seçmen  |  Dokuz Eylül University
-Repository :  github.com/MuratSecmen/distribution-network-design_deu
-=========================================================================
-"""
-
 import sys
 import os
 import gurobipy as gp
