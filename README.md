@@ -121,13 +121,13 @@ python main.py
 ```
 distribution-network-design_deu/
 ├── extended_model/
-│   ├── main.py                     # Model + solver
-│   ├── parameters.xlsx             # 9 sayfalık parametre seti
-│   └── transportation_costs.xlsx   # Maliyet matrisi
+│   ├── main.py                     
+│   ├── parameters.xlsx             
+│   └── transportation_costs.xlsx   
 ├── results/
-│   ├── milp_solution.xlsx          # MILP çözüm detayları
-│   └── optimal_solution.xlsx       # Optimal çözüm özeti
-├── LICENSE                         # MIT
+│   ├── milp_solution.xlsx          
+│   └── optimal_solution.xlsx       
+├── LICENSE                         
 └── README.md
 ```
 

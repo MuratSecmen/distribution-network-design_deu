@@ -15,52 +15,52 @@ OUTPUT_DIR     = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =========================================================================
-# 1.  SET LABELS (for readability in output)
+# 1.  SET LABELS
 # =========================================================================
 SUPPLIER_NAMES = {1: "Moskova", 2: "Berlin", 3: "Oslo", 4: "Astana", 5: "Pekin"}
 FACTORY_NAMES  = {1: "Madrid", 2: "St.Pete", 3: "Varşova", 4: "Ankara"}
 DC_NAMES       = {1: "Ukrayna", 2: "Polonya", 3: "Romanya"}
+CUSTOMER_NAMES = {1: "Müşteri_1", 2: "Müşteri_2", 3: "Müşteri_3",
+                  4: "Müşteri_4", 5: "Müşteri_5", 6: "Müşteri_6"}
 MODE_NAMES     = {1: "Demiryolu", 2: "Karayolu", 3: "Denizyolu", 4: "Havayolu"}
 
 SUPPLIERS  = list(SUPPLIER_NAMES.keys())   # I = {1..5}
 FACTORIES  = list(FACTORY_NAMES.keys())    # J = {1..4}
 DCS        = list(DC_NAMES.keys())         # L = {1..3}
-MODES      = list(MODE_NAMES.keys())       # T = {1..4}
+CUSTOMERS  = list(CUSTOMER_NAMES.keys())   # K = {1..6}
+MODES      = list(MODE_NAMES.keys())       # M = {1..4}
 PRODUCTS   = [1, 2, 3]                     # N = {1..3}
 PERIODS    = [1, 2, 3, 4]                  # P = {1..4}
 
 # =========================================================================
 # 2.  GEOGRAPHIC TRANSPORTATION-MODE FEASIBILITY
-#     Key   : (supplier_index, factory_index)
-#     Value : list of feasible mode indices
-#     Source: Geographic network analysis (Eurasian supply routes)
 # =========================================================================
 FEASIBLE_MODES = {
     # ── Moskova (landlocked) ──────────────────────────────────────────────
-    (1, 1): [1, 2, 4],       # Moskova → Madrid   : rail, road, air
-    (1, 2): [1, 2, 4],       # Moskova → St.Pete  : rail, road, air
-    (1, 3): [1, 2, 4],       # Moskova → Varşova  : rail, road, air
-    (1, 4): [1, 2, 4],       # Moskova → Ankara   : rail, road, air
+    (1, 1): [1, 2, 4],
+    (1, 2): [1, 2, 4],
+    (1, 3): [1, 2, 4],
+    (1, 4): [1, 2, 4],
     # ── Berlin ────────────────────────────────────────────────────────────
-    (2, 1): [1, 2, 4],       # Berlin  → Madrid   : rail, road, air
-    (2, 2): [1, 2, 4],       # Berlin  → St.Pete  : rail, road, air
-    (2, 3): [1, 2, 4],       # Berlin  → Varşova  : rail, road, air
-    (2, 4): [1, 2, 4],       # Berlin  → Ankara   : rail, road, air
+    (2, 1): [1, 2, 4],
+    (2, 2): [1, 2, 4],
+    (2, 3): [1, 2, 4],
+    (2, 4): [1, 2, 4],
     # ── Oslo (North Sea access) ───────────────────────────────────────────
-    (3, 1): [1, 2, 3, 4],    # Oslo    → Madrid   : ALL modes
-    (3, 2): [1, 2, 3, 4],    # Oslo    → St.Pete  : ALL modes
-    (3, 3): [1, 2, 4],       # Oslo    → Varşova  : rail, road, air (inland)
-    (3, 4): [1, 2, 3, 4],    # Oslo    → Ankara   : ALL modes (Mediterranean)
+    (3, 1): [1, 2, 3, 4],
+    (3, 2): [1, 2, 3, 4],
+    (3, 3): [1, 2, 4],
+    (3, 4): [1, 2, 3, 4],
     # ── Astana (double landlocked) ────────────────────────────────────────
-    (4, 1): [1, 4],          # Astana  → Madrid   : rail, air only
-    (4, 2): [1, 2, 4],       # Astana  → St.Pete  : rail, road, air
-    (4, 3): [1, 4],          # Astana  → Varşova  : rail, air only
-    (4, 4): [1, 2, 4],       # Astana  → Ankara   : rail, road, air
-    # ── Pekin (China – sea / rail / air feasible) ─────────────────────────
-    (5, 1): [1, 3, 4],       # Pekin   → Madrid   : rail, sea, air
-    (5, 2): [1, 3, 4],       # Pekin   → St.Pete  : rail, sea, air
-    (5, 3): [1, 4],          # Pekin   → Varşova  : rail, air (no practical sea)
-    (5, 4): [1, 3, 4],       # Pekin   → Ankara   : rail, sea, air
+    (4, 1): [1, 4],
+    (4, 2): [1, 2, 4],
+    (4, 3): [1, 4],
+    (4, 4): [1, 2, 4],
+    # ── Pekin ─────────────────────────────────────────────────────────────
+    (5, 1): [1, 3, 4],
+    (5, 2): [1, 3, 4],
+    (5, 3): [1, 4],
+    (5, 4): [1, 3, 4],
 }
 
 # =========================================================================
@@ -68,99 +68,162 @@ FEASIBLE_MODES = {
 # =========================================================================
 def load_parameters():
     """
-    Read all numerical parameters from the two Excel workbooks.
-    All scalar rates, costs, capacities, and demand values must be
-    defined in the workbooks – no hardcoded numerics in model logic.
+    Tüm sayısal parametreler Excel dosyalarından okunur.
+    Modelde hiçbir hardcoded sayısal değer bulunmaz.
     """
-    print("  [INFO] Reading parameters from Excel workbooks …")
+    print("  [INFO] Reading parameters from Excel workbooks ...")
 
-    # ── Scalar parameters (pi_rate, big_M, etc.) ─────────────────────────
+    # ── Scalar parameters ─────────────────────────────────────────────────
     df_scalar = pd.read_excel(PARAMS_FILE, sheet_name="SCALAR_PARAMS",
                               index_col=0, header=0)
-    scalar = df_scalar.iloc[:, 0].to_dict()
-    pi_rate = float(scalar.get("pi_rate", 0.10))
-    big_M   = float(scalar.get("big_M",  1e6))
+    scalar  = df_scalar.iloc[:, 0].to_dict()
+    big_M   = float(scalar.get("big_M", 1e6))
 
-    # ── Demand  D[n, p] ───────────────────────────────────────────────────
+    # ── Demand  d[k, n, p] ────────────────────────────────────────────────
+    # Sheet layout: columns = [k, n, p, demand]
     df_demand = pd.read_excel(PARAMS_FILE, sheet_name="DEMAND",
-                              index_col=0, header=0)
-    # rows = products, cols = periods
-    demand = {(int(n), int(p)): float(df_demand.loc[n, p])
-              for n in df_demand.index
-              for p in df_demand.columns}
+                              index_col=False, header=0)
+    demand = {}
+    for _, row in df_demand.iterrows():
+        key = (int(row["k"]), int(row["n"]), int(row["p"]))
+        demand[key] = float(row["demand"])
 
-    # ── Production cost  c_prod[j, n, p] ─────────────────────────────────
-    df_pc = pd.read_excel(PARAMS_FILE, sheet_name="PROD_COST",
-                          index_col=0, header=0)
-    prod_cost = {(int(j), int(n)): float(df_pc.loc[j, n])
-                 for j in df_pc.index
-                 for n in df_pc.columns}
-
-    # ── Factory capacity  CAP_J[j, p] ─────────────────────────────────────
-    df_jcap = pd.read_excel(PARAMS_FILE, sheet_name="FACTORY_CAP",
-                            index_col=0, header=0)
-    factory_cap = {(int(j), int(p)): float(df_jcap.loc[j, p])
-                   for j in df_jcap.index
-                   for p in df_jcap.columns}
-
-    # ── DC capacity  CAP_L[l, p] ──────────────────────────────────────────
-    df_lcap = pd.read_excel(PARAMS_FILE, sheet_name="DC_CAP",
-                            index_col=0, header=0)
-    dc_cap = {(int(l), int(p)): float(df_lcap.loc[l, p])
-              for l in df_lcap.index
-              for p in df_lcap.columns}
-
-    # ── DC investment cost  K[l] ──────────────────────────────────────────
-    df_invest = pd.read_excel(PARAMS_FILE, sheet_name="DC_INVEST",
-                              index_col=0, header=0)
-    dc_invest = {int(l): float(df_invest.loc[l, "K"])
-                 for l in df_invest.index}
-
-    # ── DC open/close switching cost  SC[l] ───────────────────────────────
-    df_switch = pd.read_excel(PARAMS_FILE, sheet_name="DC_SWITCH",
-                              index_col=0, header=0)
-    dc_switch = {int(l): float(df_switch.loc[l, "SC"])
-                 for l in df_switch.index}
-
-    # ── Inventory holding cost  h[l, n] ──────────────────────────────────
-    df_hold = pd.read_excel(PARAMS_FILE, sheet_name="HOLD_COST",
-                            index_col=0, header=0)
-    hold_cost = {(int(l), int(n)): float(df_hold.loc[l, n])
-                 for l in df_hold.index
-                 for n in df_hold.columns}
-
-    # ── Backlog penalty  b_pen[l, n] ─────────────────────────────────────
-    df_back = pd.read_excel(PARAMS_FILE, sheet_name="BACK_COST",
-                            index_col=0, header=0)
-    back_cost = {(int(l), int(n)): float(df_back.loc[l, n])
-                 for l in df_back.index
-                 for n in df_back.columns}
-
-    # ── Transportation cost  c_trans[i, j, t, n] ─────────────────────────
+    # ── Transportation cost  c_S[i, j, m, n] ─────────────────────────────
+    # Sheet layout: columns = [i, j, m, n, cost]
     df_tc = pd.read_excel(TRANSPORT_FILE, sheet_name="TRANS_COST",
                           index_col=False, header=0)
-    # Multi-index column (supplier, factory, mode, product) packed in rows
-    # Expected sheet layout: columns = [i, j, t, n, cost]
     trans_cost = {}
     for _, row in df_tc.iterrows():
-        key = (int(row["i"]), int(row["j"]), int(row["t"]), int(row["n"]))
+        key = (int(row["i"]), int(row["j"]), int(row["m"]), int(row["n"]))
         trans_cost[key] = float(row["cost"])
 
-    print(f"  [INFO] pi_rate={pi_rate:.4f} | big_M={big_M:.0f} | "
-          f"demand entries={len(demand)} | trans_cost entries={len(trans_cost)}")
+    # ── Factory-to-DC cost  c_F[j, l, n, p] ─────────────────────────────
+    # Sheet layout: columns = [j, l, n, p, cost]
+    df_fc = pd.read_excel(PARAMS_FILE, sheet_name="FACTORY_DC_COST",
+                          index_col=False, header=0)
+    factory_dc_cost = {}
+    for _, row in df_fc.iterrows():
+        key = (int(row["j"]), int(row["l"]), int(row["n"]), int(row["p"]))
+        factory_dc_cost[key] = float(row["cost"])
+
+    # ── DC-to-customer cost  c_D[l, k, n, p] ────────────────────────────
+    # Sheet layout: columns = [l, k, n, p, cost]
+    df_dc = pd.read_excel(PARAMS_FILE, sheet_name="DC_CUST_COST",
+                          index_col=False, header=0)
+    dc_cust_cost = {}
+    for _, row in df_dc.iterrows():
+        key = (int(row["l"]), int(row["k"]), int(row["n"]), int(row["p"]))
+        dc_cust_cost[key] = float(row["cost"])
+
+    # ── Supplier capacity  alpha[i, n, p] ────────────────────────────────
+    # Sheet layout: columns = [i, n, p, capacity]
+    df_sup = pd.read_excel(PARAMS_FILE, sheet_name="SUPPLIER_CAP",
+                           index_col=False, header=0)
+    supplier_cap = {}
+    for _, row in df_sup.iterrows():
+        key = (int(row["i"]), int(row["n"]), int(row["p"]))
+        supplier_cap[key] = float(row["capacity"])
+
+    # ── Factory production capacity  b[j, n, p] ──────────────────────────
+    # Sheet layout: columns = [j, n, p, capacity]
+    df_jcap = pd.read_excel(PARAMS_FILE, sheet_name="FACTORY_CAP",
+                            index_col=False, header=0)
+    factory_cap = {}
+    for _, row in df_jcap.iterrows():
+        key = (int(row["j"]), int(row["n"]), int(row["p"]))
+        factory_cap[key] = float(row["capacity"])
+
+    # ── Mode capacity  A[m, p] ────────────────────────────────────────────
+    # Sheet layout: columns = [m, p, capacity]
+    df_mode = pd.read_excel(PARAMS_FILE, sheet_name="MODE_CAP",
+                            index_col=False, header=0)
+    mode_cap = {}
+    for _, row in df_mode.iterrows():
+        key = (int(row["m"]), int(row["p"]))
+        mode_cap[key] = float(row["capacity"])
+
+    # ── DC throughput capacity  u[l, p] ──────────────────────────────────
+    # Sheet layout: columns = [l, p, throughput]
+    df_utput = pd.read_excel(PARAMS_FILE, sheet_name="DC_THROUGHPUT",
+                             index_col=False, header=0)
+    dc_throughput = {}
+    for _, row in df_utput.iterrows():
+        key = (int(row["l"]), int(row["p"]))
+        dc_throughput[key] = float(row["throughput"])
+
+    # ── DC storage capacity  v[l, p] ─────────────────────────────────────
+    # Sheet layout: columns = [l, p, storage]
+    df_stor = pd.read_excel(PARAMS_FILE, sheet_name="DC_STORAGE",
+                            index_col=False, header=0)
+    dc_storage = {}
+    for _, row in df_stor.iterrows():
+        key = (int(row["l"]), int(row["p"]))
+        dc_storage[key] = float(row["storage"])
+
+    # ── DC fixed investment cost  f[l, p] ────────────────────────────────
+    # Sheet layout: columns = [l, p, cost]
+    df_invest = pd.read_excel(PARAMS_FILE, sheet_name="DC_INVEST",
+                              index_col=False, header=0)
+    dc_invest = {}
+    for _, row in df_invest.iterrows():
+        key = (int(row["l"]), int(row["p"]))
+        dc_invest[key] = float(row["cost"])
+
+    # ── DC variable operating cost  g[l, p] ──────────────────────────────
+    # Sheet layout: columns = [l, p, cost]
+    df_opcost = pd.read_excel(PARAMS_FILE, sheet_name="DC_OPCOST",
+                              index_col=False, header=0)
+    dc_opcost = {}
+    for _, row in df_opcost.iterrows():
+        key = (int(row["l"]), int(row["p"]))
+        dc_opcost[key] = float(row["cost"])
+
+    # ── DC switching cost  sc[l] ──────────────────────────────────────────
+    # Sheet layout: columns = [l, sc]
+    df_switch = pd.read_excel(PARAMS_FILE, sheet_name="DC_SWITCH",
+                              index_col=False, header=0)
+    dc_switch = {}
+    for _, row in df_switch.iterrows():
+        dc_switch[int(row["l"])] = float(row["sc"])
+
+    # ── Inventory holding cost  h[l, n, p] ───────────────────────────────
+    # Sheet layout: columns = [l, n, p, cost]
+    df_hold = pd.read_excel(PARAMS_FILE, sheet_name="HOLD_COST",
+                            index_col=False, header=0)
+    hold_cost = {}
+    for _, row in df_hold.iterrows():
+        key = (int(row["l"]), int(row["n"]), int(row["p"]))
+        hold_cost[key] = float(row["cost"])
+
+    # ── Backlog penalty cost  beta[k, n, p] ──────────────────────────────
+    # Sheet layout: columns = [k, n, p, cost]
+    df_back = pd.read_excel(PARAMS_FILE, sheet_name="BACK_COST",
+                            index_col=False, header=0)
+    back_cost = {}
+    for _, row in df_back.iterrows():
+        key = (int(row["k"]), int(row["n"]), int(row["p"]))
+        back_cost[key] = float(row["cost"])
+
+    print(f"  [INFO] big_M={big_M:.0f} | "
+          f"demand entries={len(demand)} | "
+          f"trans_cost entries={len(trans_cost)}")
 
     return {
-        "pi_rate":    pi_rate,
-        "big_M":      big_M,
-        "demand":     demand,
-        "prod_cost":  prod_cost,
-        "factory_cap":factory_cap,
-        "dc_cap":     dc_cap,
-        "dc_invest":  dc_invest,
-        "dc_switch":  dc_switch,
-        "hold_cost":  hold_cost,
-        "back_cost":  back_cost,
-        "trans_cost": trans_cost,
+        "big_M":          big_M,
+        "demand":         demand,
+        "trans_cost":     trans_cost,
+        "factory_dc_cost":factory_dc_cost,
+        "dc_cust_cost":   dc_cust_cost,
+        "supplier_cap":   supplier_cap,
+        "factory_cap":    factory_cap,
+        "mode_cap":       mode_cap,
+        "dc_throughput":  dc_throughput,
+        "dc_storage":     dc_storage,
+        "dc_invest":      dc_invest,
+        "dc_opcost":      dc_opcost,
+        "dc_switch":      dc_switch,
+        "hold_cost":      hold_cost,
+        "back_cost":      back_cost,
     }
 
 
@@ -168,91 +231,88 @@ def load_parameters():
 # 4.  MODEL CONSTRUCTION
 # =========================================================================
 def build_model(params):
-    pi   = params["pi_rate"]
-    M    = params["big_M"]
-    D    = params["demand"]
-    c_p  = params["prod_cost"]
-    c_t  = params["trans_cost"]
-    CAP_J= params["factory_cap"]
-    CAP_L= params["dc_cap"]
-    K    = params["dc_invest"]
-    SC   = params["dc_switch"]
-    h    = params["hold_cost"]
-    b    = params["back_cost"]
+    M_big  = params["big_M"]
+    D      = params["demand"]           # d[k,n,p]
+    c_S    = params["trans_cost"]       # c_S[i,j,m,n]
+    c_F    = params["factory_dc_cost"]  # c_F[j,l,n,p]
+    c_D    = params["dc_cust_cost"]     # c_D[l,k,n,p]
+    alpha  = params["supplier_cap"]     # alpha[i,n,p]
+    b_cap  = params["factory_cap"]      # b[j,n,p]
+    A      = params["mode_cap"]         # A[m,p]
+    u_cap  = params["dc_throughput"]    # u[l,p]
+    v_cap  = params["dc_storage"]       # v[l,p]
+    f_inv  = params["dc_invest"]        # f[l,p]
+    g_op   = params["dc_opcost"]        # g[l,p]
+    sc     = params["dc_switch"]        # sc[l]
+    h      = params["hold_cost"]        # h[l,n,p]
+    beta   = params["back_cost"]        # beta[k,n,p]
 
     model = gp.Model("DistNet_MILP_Extended")
     model.Params.LogFile   = os.path.join(OUTPUT_DIR, "gurobi.log")
-    model.Params.TimeLimit = 3600      # 1-hour wall-clock limit
-    model.Params.MIPGap    = 0.01      # 1 % optimality gap
+    model.Params.TimeLimit = 3600
+    model.Params.MIPGap    = 0.01
 
     # ─────────────────────────────────────────────────────────────────────
-    # 4a. DECISION VARIABLES
+    # 4a. DECISION VARIABLES  (LaTeX notasyonu ile birebir eşleşme)
     # ─────────────────────────────────────────────────────────────────────
 
-    # X[i,j,t,n,p] : shipment quantity from supplier i to factory j
-    #                via mode t, product n, period p
-    #                (only geographically feasible (i,j,t) triples)
-    X = {
-        (i, j, t, n, p): model.addVar(lb=0.0, name=f"X{i}{j}{t}{n}{p}")
+    # x[i,j,m,n,p] : tedarikçi i → fabrika j, mod m, ürün n, dönem p
+    x = {
+        (i, j, m, n, p): model.addVar(lb=0.0, name=f"x_{i}_{j}_{m}_{n}_{p}")
         for i in SUPPLIERS
         for j in FACTORIES
-        for t in MODES
+        for m in MODES
         for n in PRODUCTS
         for p in PERIODS
-        if t in FEASIBLE_MODES.get((i, j), [])   # ← geographic filter
+        if m in FEASIBLE_MODES.get((i, j), [])
     }
 
-    # W[j,n,p] : production quantity at factory j, product n, period p
-    W = {
-        (j, n, p): model.addVar(lb=0.0, name=f"W{j}{n}{p}")
+    # w[j,l,n,p] : fabrika j → DC l, ürün n, dönem p  (DC indeksi var)
+    w = {
+        (j, l, n, p): model.addVar(lb=0.0, name=f"w_{j}_{l}_{n}_{p}")
         for j in FACTORIES
-        for n in PRODUCTS
-        for p in PERIODS
-    }
-
-    # Y[l,n,p] : delivery from DC l to market, product n, period p
-    Y = {
-        (l, n, p): model.addVar(lb=0.0, name=f"Y{l}{n}{p}")
         for l in DCS
         for n in PRODUCTS
         for p in PERIODS
     }
 
-    # B[l,n,p] : backlog at DC l, product n, period p
-    #            B[l,n,0] is a free variable – not forced to zero
-    B = {
-        (l, n, p): model.addVar(lb=0.0, name=f"B{l}{n}{p}")
+    # y[l,k,n,p] : DC l → müşteri k, ürün n, dönem p
+    y = {
+        (l, k, n, p): model.addVar(lb=0.0, name=f"y_{l}_{k}_{n}_{p}")
         for l in DCS
+        for k in CUSTOMERS
         for n in PRODUCTS
-        for p in [0] + PERIODS          # p=0 is the initial backlog
+        for p in PERIODS
     }
 
-    # Q[l,n,p] : inventory at DC l, product n, end of period p
-    #            Q[l,n,0] is the initial inventory
-    Q = {
-        (l, n, p): model.addVar(lb=0.0, name=f"Q{l}{n}{p}")
+    # q[l,n,p] : DC l'deki stok, ürün n, dönem p sonu
+    # p=0 → başlangıç stoku (serbest değişken, sıfıra zorlanmaz)
+    q = {
+        (l, n, p): model.addVar(lb=0.0, name=f"q_{l}_{n}_{p}")
         for l in DCS
         for n in PRODUCTS
         for p in [0] + PERIODS
     }
 
-    # y[l] : binary – invest in (open) DC l (strategic, period-0 decision)
-    y = {
-        l: model.addVar(vtype=GRB.BINARY, name=f"y{l}")
-        for l in DCS
+    # b_bl[k,n,p] : müşteri k'nın birikmiş talebi, ürün n, dönem p sonu
+    # p=0 → başlangıç birikimleri (serbest değişken)
+    b_bl = {
+        (k, n, p): model.addVar(lb=0.0, name=f"b_{k}_{n}_{p}")
+        for k in CUSTOMERS
+        for n in PRODUCTS
+        for p in [0] + PERIODS
     }
 
-    # z[l,p] : binary – DC l is operational in period p
+    # z[l,p] : DC l dönem p'de açık mı (binary)
     z = {
-        (l, p): model.addVar(vtype=GRB.BINARY, name=f"z{l}{p}")
+        (l, p): model.addVar(vtype=GRB.BINARY, name=f"z_{l}_{p}")
         for l in DCS
         for p in PERIODS
     }
 
-    # delta[l,p] : binary – DC l opens in period p (switching indicator)
-    #              1 if z[l,p]=1 and z[l,p-1]=0
+    # delta[l,p] : DC l dönem p'de statü değiştirdi mi (binary)
     delta = {
-        (l, p): model.addVar(vtype=GRB.BINARY, name=f"delta{l}{p}")
+        (l, p): model.addVar(vtype=GRB.BINARY, name=f"delta_{l}_{p}")
         for l in DCS
         for p in PERIODS
     }
@@ -260,152 +320,211 @@ def build_model(params):
     model.update()
 
     # ─────────────────────────────────────────────────────────────────────
-    # 4b. OBJECTIVE FUNCTION
-    #     Minimise: transportation + production + inventory holding
-    #               + backlog penalty + DC investment + DC switching
+    # 4b. OBJECTIVE FUNCTION  — LaTeX eq_1 ile birebir
+    #
+    # min Z = Σ c_S * x  +  Σ c_F * w  +  Σ c_D * y
+    #       + Σ (f*z + g*Σy)  +  Σ h*q  +  Σ beta*b  +  Σ sc*delta
     # ─────────────────────────────────────────────────────────────────────
     obj = gp.LinExpr()
 
-    # Transportation cost
-    for (i, j, t, n, p), var in X.items():
-        key = (i, j, t, n)
-        if key in c_t:
-            obj += c_t[key] * var
+    # Tedarikçi → fabrika nakliye maliyeti
+    for (i, j, m, n, p), var in x.items():
+        obj += c_S.get((i, j, m, n), 0.0) * var
 
-    # Production cost
-    for j in FACTORIES:
-        for n in PRODUCTS:
-            for p in PERIODS:
-                key = (j, n)
-                if key in c_p:
-                    obj += c_p[key] * W[j, n, p]
+    # Fabrika → DC nakliye maliyeti
+    for (j, l, n, p), var in w.items():
+        obj += c_F.get((j, l, n, p), 0.0) * var
 
-    # Inventory holding cost  (end-of-period inventory × rate × unit_value)
-    for l in DCS:
-        for n in PRODUCTS:
-            for p in PERIODS:
-                obj += h.get((l, n), pi) * Q[l, n, p]
+    # DC → müşteri nakliye maliyeti
+    for (l, k, n, p), var in y.items():
+        obj += c_D.get((l, k, n, p), 0.0) * var
 
-    # Backlog penalty
-    for l in DCS:
-        for n in PRODUCTS:
-            for p in PERIODS:
-                obj += b.get((l, n), 0.0) * B[l, n, p]
-
-    # DC one-time investment cost (paid at start of planning horizon)
-    for l in DCS:
-        obj += K.get(l, 0.0) * y[l]
-
-    # DC open/close switching cost
+    # DC sabit yatırım maliyeti  f[l,p] * z[l,p]
     for l in DCS:
         for p in PERIODS:
-            obj += SC.get(l, 0.0) * delta[l, p]
+            obj += f_inv.get((l, p), 0.0) * z[l, p]
+
+    # DC değişken işletme maliyeti  g[l,p] * Σ_{n,k} y[l,k,n,p]
+    for l in DCS:
+        for p in PERIODS:
+            total_y = gp.quicksum(y[l, k, n, p]
+                                  for k in CUSTOMERS
+                                  for n in PRODUCTS)
+            obj += g_op.get((l, p), 0.0) * total_y
+
+    # Stok tutma maliyeti  h[l,n,p] * q[l,n,p]
+    for l in DCS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                obj += h.get((l, n, p), 0.0) * q[l, n, p]
+
+    # Gecikme ceza maliyeti  beta[k,n,p] * b[k,n,p]
+    for k in CUSTOMERS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                obj += beta.get((k, n, p), 0.0) * b_bl[k, n, p]
+
+    # DC statü değişim maliyeti  sc[l] * delta[l,p]
+    for l in DCS:
+        for p in PERIODS:
+            obj += sc.get(l, 0.0) * delta[l, p]
 
     model.setObjective(obj, GRB.MINIMIZE)
 
     # ─────────────────────────────────────────────────────────────────────
-    # 4c. CONSTRAINTS
+    # 4c. CONSTRAINTS  — LaTeX kısıtlarıyla birebir eşleşme
     # ─────────────────────────────────────────────────────────────────────
 
-    # C1 – Raw material supply balance at factory j
-    #      Sum of inbound shipments = production (with 1-period lead time)
-    for j in FACTORIES:
-        for n in PRODUCTS:
-            for p in PERIODS:
-                inbound = gp.quicksum(
-                    X[i, j, t, n, p]
-                    for i in SUPPLIERS
-                    for t in MODES
-                    if (i, j, t, n, p) in X
-                )
-                if p == 1:
-                    model.addConstr(inbound == W[j, n, p],
-                                    name=f"C1_supply_{j}_{n}_{p}")
-                else:
-                    model.addConstr(inbound == W[j, n, p],
-                                    name=f"C1_supply_{j}_{n}_{p}")
-
-    # C2 – Inventory balance at DC l (Fj = 1 period production delay)
-    #      Q[l,n,p] = Q[l,n,p-1] + (sum_j W[j,n,p-1]) - Y[l,n,p] + B[l,n,p] - B[l,n,p-1]
-    for l in DCS:
-        for n in PRODUCTS:
-            for p in PERIODS:
-                production_prev = gp.quicksum(W[j, n, p - 1] for j in FACTORIES) \
-                    if p > 1 else gp.LinExpr(0)
-                # (for p=1 there is no W[j,n,0] – assume zero initial production)
-                model.addConstr(
-                    Q[l, n, p] == Q[l, n, p - 1] + production_prev
-                                  - Y[l, n, p] + B[l, n, p] - B[l, n, p - 1],
-                    name=f"C2_inv_balance_{l}_{n}_{p}"
-                )
-
-    # C3 – Demand satisfaction at DC l
-    for l in DCS:
+    # ── Constraint eq_2 : Tedarikçi kapasite kısıtı ──────────────────────
+    # Σ_{j,m} x[i,j,m,n,p] <= alpha[i,n,p]
+    for i in SUPPLIERS:
         for n in PRODUCTS:
             for p in PERIODS:
                 model.addConstr(
-                    Y[l, n, p] + B[l, n, p] >= D.get((n, p), 0),
-                    name=f"C3_demand_{l}_{n}_{p}"
+                    gp.quicksum(x[i, j, m, n, p]
+                                for j in FACTORIES
+                                for m in MODES
+                                if (i, j, m, n, p) in x)
+                    <= alpha.get((i, n, p), GRB.INFINITY),
+                    name=f"eq2_supplier_cap_{i}_{n}_{p}"
                 )
 
-    # C4 – Factory production capacity
+    # ── Constraint eq_3 : Fabrika üretim kapasitesi ───────────────────────
+    # Σ_l w[j,l,n,p] <= b[j,n,p]
     for j in FACTORIES:
-        for p in PERIODS:
-            model.addConstr(
-                gp.quicksum(W[j, n, p] for n in PRODUCTS)
-                <= CAP_J.get((j, p), GRB.INFINITY),
-                name=f"C4_factory_cap_{j}_{p}"
-            )
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(w[j, l, n, p] for l in DCS)
+                    <= b_cap.get((j, n, p), GRB.INFINITY),
+                    name=f"eq3_factory_cap_{j}_{n}_{p}"
+                )
 
-    # C5 – DC throughput capacity (only if DC is open)
+    # ── Constraint eq_4 : Fabrikada akış dengesi ──────────────────────────
+    # Σ_{i,m} x[i,j,m,n,p] = Σ_l w[j,l,n,p]
+    for j in FACTORIES:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                inbound = gp.quicksum(x[i, j, m, n, p]
+                                      for i in SUPPLIERS
+                                      for m in MODES
+                                      if (i, j, m, n, p) in x)
+                outbound = gp.quicksum(w[j, l, n, p] for l in DCS)
+                model.addConstr(
+                    inbound == outbound,
+                    name=f"eq4_flow_balance_{j}_{n}_{p}"
+                )
+
+    # ── Constraint eq_5 : DC envanter dengesi ─────────────────────────────
+    # q[l,n,p] = q[l,n,p-1] + Σ_j w[j,l,n,p] - Σ_k y[l,k,n,p]
+    for l in DCS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    q[l, n, p]
+                    == q[l, n, p - 1]
+                    + gp.quicksum(w[j, l, n, p] for j in FACTORIES)
+                    - gp.quicksum(y[l, k, n, p] for k in CUSTOMERS),
+                    name=f"eq5_inv_balance_{l}_{n}_{p}"
+                )
+
+    # ── Constraint eq_6 : DC depo kapasitesi ─────────────────────────────
+    # Σ_n q[l,n,p] <= v[l,p]
     for l in DCS:
         for p in PERIODS:
-            cap_lp = CAP_L.get((l, p), GRB.INFINITY)
             model.addConstr(
-                gp.quicksum(Y[l, n, p] for n in PRODUCTS)
-                <= cap_lp * z[l, p],
-                name=f"C5_dc_cap_{l}_{p}"
+                gp.quicksum(q[l, n, p] for n in PRODUCTS)
+                <= v_cap.get((l, p), GRB.INFINITY),
+                name=f"eq6_storage_cap_{l}_{p}"
             )
 
-    # C6 – DC can only operate if investment was made
+    # ── Constraint eq_7 : DC işlem kapasitesi ────────────────────────────
+    # Σ_{k,n} y[l,k,n,p] <= u[l,p]
     for l in DCS:
         for p in PERIODS:
-            model.addConstr(z[l, p] <= y[l],
-                            name=f"C6_invest_link_{l}_{p}")
+            model.addConstr(
+                gp.quicksum(y[l, k, n, p]
+                            for k in CUSTOMERS
+                            for n in PRODUCTS)
+                <= u_cap.get((l, p), GRB.INFINITY),
+                name=f"eq7_throughput_cap_{l}_{p}"
+            )
 
-    # C7 – Switching indicator (open in p but not in p-1)
-    #      delta[l,p] >= z[l,p] - z[l,p-1]
+    # ── Constraint eq_8 : Talep karşılama (backlog ile) ───────────────────
+    # Σ_l y[l,k,n,p] + b[k,n,p-1] - b[k,n,p] = d[k,n,p]
+    for k in CUSTOMERS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(y[l, k, n, p] for l in DCS)
+                    + b_bl[k, n, p - 1]
+                    - b_bl[k, n, p]
+                    == D.get((k, n, p), 0.0),
+                    name=f"eq8_demand_{k}_{n}_{p}"
+                )
+
+    # ── Constraint eq_9 : Taşıma modu kapasitesi ─────────────────────────
+    # Σ_{i,j} x[i,j,m,n,p] <= A[m,p]
+    for m in MODES:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(x[i, j, m, n, p]
+                                for i in SUPPLIERS
+                                for j in FACTORIES
+                                if (i, j, m, n, p) in x)
+                    <= A.get((m, p), GRB.INFINITY),
+                    name=f"eq9_mode_cap_{m}_{n}_{p}"
+                )
+
+    # ── Constraint eq_10 : DC girişi → açık DC bağı (Big-M) ──────────────
+    # Σ_j w[j,l,n,p] <= M_big * z[l,p]
+    for l in DCS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(w[j, l, n, p] for j in FACTORIES)
+                    <= M_big * z[l, p],
+                    name=f"eq10_dc_inflow_link_{l}_{n}_{p}"
+                )
+
+    # ── Constraint eq_11 : DC çıkışı → açık DC bağı (Big-M) ─────────────
+    # Σ_k y[l,k,n,p] <= M_big * z[l,p]
+    for l in DCS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(y[l, k, n, p] for k in CUSTOMERS)
+                    <= M_big * z[l, p],
+                    name=f"eq11_dc_outflow_link_{l}_{n}_{p}"
+                )
+
+    # ── Constraints eq_12 & eq_13 : Switching linearizasyonu (her iki yön)
+    # delta[l,p] >= z[l,p] - z[l,p-1]   (kapanmış → açılmış)
+    # delta[l,p] >= z[l,p-1] - z[l,p]   (açılmış → kapanmış)
     for l in DCS:
         for p in PERIODS:
             z_prev = z[l, p - 1] if p > 1 else gp.LinExpr(0)
             model.addConstr(
                 delta[l, p] >= z[l, p] - z_prev,
-                name=f"C7_switch_{l}_{p}"
+                name=f"eq12_switch_open_{l}_{p}"
+            )
+            model.addConstr(
+                delta[l, p] >= z_prev - z[l, p],
+                name=f"eq13_switch_close_{l}_{p}"
             )
 
-    # C8 – Symmetry breaking (if DC l is open, prefer lower-indexed DCs)
-    for l in DCS[:-1]:
-        model.addConstr(y[l] >= y[l + 1],
-                        name=f"C8_symmetry_{l}")
+    # ── Constraints eq_14 & eq_15 : Non-negativity & binary integrality ───
+    # lb=0 değişken tanımında zaten uygulandı.
+    # Binary kısıtı vtype=GRB.BINARY ile uygulandı.
 
-    # C9 – Valid inequality: at least one DC must be open per period
-    for p in PERIODS:
-        model.addConstr(
-            gp.quicksum(z[l, p] for l in DCS) >= 1,
-            name=f"C9_min_dc_{p}"
-        )
-
-    # C10 – Non-negativity of inventory and backlog are handled by lb=0
-    #        except Q[l,n,0] and B[l,n,0] which are initial conditions
-    #        (left as free variables – values driven by data)
-
-    return model, X, W, Y, B, Q, y, z, delta
+    return model, x, w, y, q, b_bl, z, delta
 
 
 # =========================================================================
-# 5.  RESULTS EXTRACTION & EXCEL OUTPUT  (10 sheets)
+# 5.  RESULTS EXTRACTION & EXCEL OUTPUT
 # =========================================================================
-def export_results(model, X, W, Y, B, Q, y, z, delta, params):
+def export_results(model, x, w, y, q, b_bl, z, delta, params):
     status = model.Status
     if status not in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL):
         print(f"  [WARN] Model status = {status}. No feasible solution found.")
@@ -421,113 +540,165 @@ def export_results(model, X, W, Y, B, Q, y, z, delta, params):
 
     with pd.ExcelWriter(out, engine="openpyxl") as writer:
 
-        # ── Sheet 1: X – Transportation flows ────────────────────────────
+        # Sheet 1: x – Tedarikçi → fabrika akışları
         rows_x = []
-        for (i, j, t, n, p), var in X.items():
+        for (i, j, m, n, p), var in x.items():
             val = var.X
             if val > 1e-6:
                 rows_x.append({
                     "Supplier": SUPPLIER_NAMES[i],
                     "Factory":  FACTORY_NAMES[j],
-                    "Mode":     MODE_NAMES[t],
+                    "Mode":     MODE_NAMES[m],
                     "Product":  n,
                     "Period":   p,
                     "Quantity": round(val, 4),
                 })
-        pd.DataFrame(rows_x).to_excel(writer, sheet_name="X_flows",       index=False)
+        pd.DataFrame(rows_x).to_excel(writer, sheet_name="x_flows", index=False)
 
-        # ── Sheet 2: W – Production quantities ───────────────────────────
-        rows_w = [{"Factory": FACTORY_NAMES[j], "Product": n,
-                   "Period": p, "Quantity": round(W[j, n, p].X, 4)}
-                  for j in FACTORIES for n in PRODUCTS for p in PERIODS
-                  if W[j, n, p].X > 1e-6]
-        pd.DataFrame(rows_w).to_excel(writer, sheet_name="W_production",  index=False)
+        # Sheet 2: w – Fabrika → DC akışları
+        rows_w = []
+        for (j, l, n, p), var in w.items():
+            val = var.X
+            if val > 1e-6:
+                rows_w.append({
+                    "Factory": FACTORY_NAMES[j],
+                    "DC":      DC_NAMES[l],
+                    "Product": n,
+                    "Period":  p,
+                    "Quantity":round(val, 4),
+                })
+        pd.DataFrame(rows_w).to_excel(writer, sheet_name="w_factory_dc", index=False)
 
-        # ── Sheet 3: Y – DC deliveries ────────────────────────────────────
-        rows_y = [{"DC": DC_NAMES[l], "Product": n, "Period": p,
-                   "Delivery": round(Y[l, n, p].X, 4)}
-                  for l in DCS for n in PRODUCTS for p in PERIODS
-                  if Y[l, n, p].X > 1e-6]
-        pd.DataFrame(rows_y).to_excel(writer, sheet_name="Y_delivery",    index=False)
+        # Sheet 3: y – DC → müşteri teslimatları
+        rows_y = []
+        for (l, k, n, p), var in y.items():
+            val = var.X
+            if val > 1e-6:
+                rows_y.append({
+                    "DC":       DC_NAMES[l],
+                    "Customer": CUSTOMER_NAMES[k],
+                    "Product":  n,
+                    "Period":   p,
+                    "Delivery": round(val, 4),
+                })
+        pd.DataFrame(rows_y).to_excel(writer, sheet_name="y_delivery", index=False)
 
-        # ── Sheet 4: B – Backlogs ─────────────────────────────────────────
-        rows_b = [{"DC": DC_NAMES[l], "Product": n, "Period": p,
-                   "Backlog": round(B[l, n, p].X, 4)}
-                  for l in DCS for n in PRODUCTS for p in [0] + PERIODS
-                  if B[l, n, p].X > 1e-6]
-        pd.DataFrame(rows_b).to_excel(writer, sheet_name="B_backlog",     index=False)
+        # Sheet 4: q – Stok seviyeleri
+        rows_q = []
+        for l in DCS:
+            for n in PRODUCTS:
+                for p in [0] + PERIODS:
+                    rows_q.append({
+                        "DC":        DC_NAMES[l],
+                        "Product":   n,
+                        "Period":    p,
+                        "Inventory": round(q[l, n, p].X, 4),
+                    })
+        pd.DataFrame(rows_q).to_excel(writer, sheet_name="q_inventory", index=False)
 
-        # ── Sheet 5: Q – Inventory levels ────────────────────────────────
-        rows_q = [{"DC": DC_NAMES[l], "Product": n, "Period": p,
-                   "Inventory": round(Q[l, n, p].X, 4)}
-                  for l in DCS for n in PRODUCTS for p in [0] + PERIODS]
-        pd.DataFrame(rows_q).to_excel(writer, sheet_name="Q_inventory",   index=False)
+        # Sheet 5: b – Backlog seviyeleri
+        rows_b = []
+        for k in CUSTOMERS:
+            for n in PRODUCTS:
+                for p in [0] + PERIODS:
+                    val = b_bl[k, n, p].X
+                    if val > 1e-6:
+                        rows_b.append({
+                            "Customer": CUSTOMER_NAMES[k],
+                            "Product":  n,
+                            "Period":   p,
+                            "Backlog":  round(val, 4),
+                        })
+        pd.DataFrame(rows_b).to_excel(writer, sheet_name="b_backlog", index=False)
 
-        # ── Sheet 6: z – DC open/close status ────────────────────────────
-        rows_z = [{"DC": DC_NAMES[l], "Period": p, "Open": int(z[l, p].X + 0.5)}
-                  for l in DCS for p in PERIODS]
-        pd.DataFrame(rows_z).to_excel(writer, sheet_name="z_DC_status",   index=False)
+        # Sheet 6: z – DC açık/kapalı durumu
+        rows_z = []
+        for l in DCS:
+            for p in PERIODS:
+                rows_z.append({
+                    "DC":     DC_NAMES[l],
+                    "Period": p,
+                    "Open":   int(z[l, p].X + 0.5),
+                })
+        pd.DataFrame(rows_z).to_excel(writer, sheet_name="z_DC_status", index=False)
 
-        # ── Sheet 7: y – DC investment decisions ─────────────────────────
-        rows_y2 = [{"DC": DC_NAMES[l], "Invest": int(y[l].X + 0.5)}
-                   for l in DCS]
-        pd.DataFrame(rows_y2).to_excel(writer, sheet_name="y_invest",     index=False)
+        # Sheet 7: delta – DC statü değişim olayları
+        rows_d = []
+        for l in DCS:
+            for p in PERIODS:
+                if delta[l, p].X > 0.5:
+                    rows_d.append({
+                        "DC":     DC_NAMES[l],
+                        "Period": p,
+                        "Switch": 1,
+                    })
+        pd.DataFrame(rows_d).to_excel(writer, sheet_name="delta_switch", index=False)
 
-        # ── Sheet 8: delta – DC switching events ─────────────────────────
-        rows_d = [{"DC": DC_NAMES[l], "Period": p,
-                   "Switch": int(delta[l, p].X + 0.5)}
-                  for l in DCS for p in PERIODS
-                  if delta[l, p].X > 0.5]
-        pd.DataFrame(rows_d).to_excel(writer, sheet_name="delta_switch",  index=False)
-
-        # ── Sheet 9: Cost breakdown by period ────────────────────────────
+        # Sheet 8: Dönem bazlı maliyet dökümü
         rows_cost = []
         for p in PERIODS:
             trans_p = sum(
-                params["trans_cost"].get((i, j, t, n), 0.0) * X[i, j, t, n, p].X
+                params["trans_cost"].get((i, j, m, n), 0.0) * x[i, j, m, n, p].X
                 for i in SUPPLIERS for j in FACTORIES
-                for t in MODES for n in PRODUCTS
-                if (i, j, t, n, p) in X
+                for m in MODES for n in PRODUCTS
+                if (i, j, m, n, p) in x
             )
-            prod_p = sum(
-                params["prod_cost"].get((j, n), 0.0) * W[j, n, p].X
-                for j in FACTORIES for n in PRODUCTS
+            fdc_p = sum(
+                params["factory_dc_cost"].get((j, l, n, p), 0.0) * w[j, l, n, p].X
+                for j in FACTORIES for l in DCS for n in PRODUCTS
+            )
+            dcc_p = sum(
+                params["dc_cust_cost"].get((l, k, n, p), 0.0) * y[l, k, n, p].X
+                for l in DCS for k in CUSTOMERS for n in PRODUCTS
             )
             hold_p = sum(
-                params["hold_cost"].get((l, n), 0.0) * Q[l, n, p].X
+                params["hold_cost"].get((l, n, p), 0.0) * q[l, n, p].X
                 for l in DCS for n in PRODUCTS
             )
             back_p = sum(
-                params["back_cost"].get((l, n), 0.0) * B[l, n, p].X
-                for l in DCS for n in PRODUCTS
+                params["back_cost"].get((k, n, p), 0.0) * b_bl[k, n, p].X
+                for k in CUSTOMERS for n in PRODUCTS
+            )
+            invest_p = sum(
+                params["dc_invest"].get((l, p), 0.0) * z[l, p].X
+                for l in DCS
+            )
+            switch_p = sum(
+                params["dc_switch"].get(l, 0.0) * delta[l, p].X
+                for l in DCS
             )
             rows_cost.append({
-                "Period":       p,
-                "Transport":    round(trans_p, 2),
-                "Production":   round(prod_p,  2),
-                "Holding":      round(hold_p,  2),
-                "Backlog":      round(back_p,  2),
-                "Total":        round(trans_p + prod_p + hold_p + back_p, 2),
+                "Period":    p,
+                "Transport": round(trans_p,  2),
+                "Factory_DC":round(fdc_p,    2),
+                "DC_Cust":   round(dcc_p,    2),
+                "Holding":   round(hold_p,   2),
+                "Backlog":   round(back_p,   2),
+                "DC_Invest": round(invest_p, 2),
+                "DC_Switch": round(switch_p, 2),
+                "Total":     round(trans_p + fdc_p + dcc_p +
+                                   hold_p + back_p +
+                                   invest_p + switch_p, 2),
             })
-        # Investment & switching (one-time)
-        invest_total = sum(params["dc_invest"].get(l, 0.0) * y[l].X for l in DCS)
-        switch_total = sum(
-            params["dc_switch"].get(l, 0.0) * delta[l, p].X
-            for l in DCS for p in PERIODS
-        )
-        rows_cost.append({"Period": "DC_Invest",  "Total": round(invest_total, 2)})
-        rows_cost.append({"Period": "DC_Switch",  "Total": round(switch_total, 2)})
-        rows_cost.append({"Period": "GRAND TOTAL","Total": round(obj_val, 2)})
+        rows_cost.append({"Period": "GRAND TOTAL",
+                          "Total": round(model.ObjVal, 2)})
         pd.DataFrame(rows_cost).to_excel(writer, sheet_name="CostByPeriod", index=False)
 
-        # ── Sheet 10: Product summary by period ──────────────────────────
+        # Sheet 9: Ürün özet tablosu
         rows_prod = []
         for n in PRODUCTS:
             for p in PERIODS:
-                total_prod = sum(W[j, n, p].X for j in FACTORIES)
-                total_del  = sum(Y[l, n, p].X for l in DCS)
-                total_inv  = sum(Q[l, n, p].X for l in DCS)
-                total_bl   = sum(B[l, n, p].X for l in DCS)
+                total_prod = sum(
+                    w[j, l, n, p].X for j in FACTORIES for l in DCS
+                )
+                total_del = sum(
+                    y[l, k, n, p].X for l in DCS for k in CUSTOMERS
+                )
+                total_inv = sum(q[l, n, p].X for l in DCS)
+                total_bl  = sum(b_bl[k, n, p].X for k in CUSTOMERS)
+                total_dem = sum(
+                    params["demand"].get((k, n, p), 0.0) for k in CUSTOMERS
+                )
                 rows_prod.append({
                     "Product":    n,
                     "Period":     p,
@@ -535,7 +706,7 @@ def export_results(model, X, W, Y, B, Q, y, z, delta, params):
                     "Delivery":   round(total_del,  4),
                     "Inventory":  round(total_inv,  4),
                     "Backlog":    round(total_bl,   4),
-                    "Demand":     params["demand"].get((n, p), 0.0),
+                    "Demand":     round(total_dem,  4),
                 })
         pd.DataFrame(rows_prod).to_excel(writer, sheet_name="ProductSummary", index=False)
 
@@ -551,23 +722,20 @@ def main():
     print("  Seçmen, Öncan & Tuna (2015) | DEÜ Lojistik")
     print("=" * 65)
 
-    # 1. Load data
     params = load_parameters()
 
-    # 2. Build and solve model
-    print("\n  [INFO] Building model …")
-    model, X, W, Y, B, Q, y, z, delta = build_model(params)
+    print("\n  [INFO] Building model ...")
+    model, x, w, y, q, b_bl, z, delta = build_model(params)
 
-    print(f"  [INFO] Variables : {model.NumVars:,}")
-    print(f"  [INFO] Constraints: {model.NumConstrs:,}")
-    print(f"  [INFO] Binary vars: {model.NumBinVars:,}")
-    print(f"  [INFO] Feasible X-triples (geographic filter): {len(X):,}")
-    print("\n  [INFO] Solving …\n")
+    print(f"  [INFO] Variables   : {model.NumVars:,}")
+    print(f"  [INFO] Constraints : {model.NumConstrs:,}")
+    print(f"  [INFO] Binary vars : {model.NumBinVars:,}")
+    print(f"  [INFO] Feasible x-triples (geographic filter): {len(x):,}")
+    print("\n  [INFO] Solving ...\n")
 
     model.optimize()
 
-    # 3. Export results
-    export_results(model, X, W, Y, B, Q, y, z, delta, params)
+    export_results(model, x, w, y, q, b_bl, z, delta, params)
 
     print("\n  Done.\n")
 
