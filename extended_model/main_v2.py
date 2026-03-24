@@ -9,8 +9,8 @@ from datetime import datetime
 # =========================================================================
 # 0.  CONFIGURATION
 # =========================================================================
-PARAMS_FILE    = os.path.join("data", "parameters.xlsx")
-TRANSPORT_FILE = os.path.join("data", "transportation_costs.xlsx")
+PARAMS_FILE    = os.path.join("data", "parameters_v2.xlsx")
+TRANSPORT_FILE = os.path.join("data", "transportation_costs_v2.xlsx")
 OUTPUT_DIR     = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -127,7 +127,7 @@ for i in SUPPLIERS:
 # =========================================================================
 # 4.  VERİ YÜKLEME
 # =========================================================================
-def load_parameters():
+def load_parameters_v2():
     print("  [INFO] Excel parametreleri okunuyor ...")
 
     df_s = pd.read_excel(PARAMS_FILE, sheet_name="SCALAR_PARAMS",
