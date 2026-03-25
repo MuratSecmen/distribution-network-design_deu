@@ -16,7 +16,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =========================================================================
 # 1.  SET LABELS  — genişletilmiş kardinaliteler
-#     |I|=10, |J|=8, |L|=6, |K|=20, |N|=5, |P|=12, |M|=4
 # =========================================================================
 SUPPLIER_NAMES = {
     1:"Moskova", 2:"Berlin",   3:"Oslo",    4:"Astana",  5:"Pekin",
@@ -43,40 +42,39 @@ PERIODS   = list(range(1, 13))            # P = {1..12}
 
 # =========================================================================
 # 2.  COĞRAFI KOORDİNATLAR (enlem, boylam)
-#     Haversine mesafe hesabı için
 # =========================================================================
 COORDS = {
     # Tedarikçiler
-    "sup_1":  (55.75,  37.62),   # Moskova
-    "sup_2":  (52.52,  13.40),   # Berlin
-    "sup_3":  (59.91,  10.75),   # Oslo
-    "sup_4":  (51.18,  71.45),   # Astana
-    "sup_5":  (39.90, 116.40),   # Pekin
-    "sup_6":  (19.08,  72.88),   # Mumbai
-    "sup_7":  (25.20,  55.27),   # Dubai
-    "sup_8":  (31.23, 121.47),   # Şanghay
-    "sup_9":  (43.65, -79.38),   # Toronto
-    "sup_10": (30.06,  31.25),   # Kahire
+    "sup_1":  (55.75,  37.62),
+    "sup_2":  (52.52,  13.40),
+    "sup_3":  (59.91,  10.75),
+    "sup_4":  (51.18,  71.45),
+    "sup_5":  (39.90, 116.40),
+    "sup_6":  (19.08,  72.88),
+    "sup_7":  (25.20,  55.27),
+    "sup_8":  (31.23, 121.47),
+    "sup_9":  (43.65, -79.38),
+    "sup_10": (30.06,  31.25),
     # Fabrikalar
-    "fac_1":  (40.42,  -3.70),   # Madrid
-    "fac_2":  (59.95,  30.32),   # St. Petersburg
-    "fac_3":  (52.23,  21.01),   # Varşova
-    "fac_4":  (39.93,  32.85),   # Ankara
-    "fac_5":  (45.46,   9.19),   # Milano
-    "fac_6":  (45.75,   4.85),   # Lyon
-    "fac_7":  (53.55,   9.99),   # Hamburg
-    "fac_8":  (47.50,  19.04),   # Budapeşte
+    "fac_1":  (40.42,  -3.70),
+    "fac_2":  (59.95,  30.32),
+    "fac_3":  (52.23,  21.01),
+    "fac_4":  (39.93,  32.85),
+    "fac_5":  (45.46,   9.19),
+    "fac_6":  (45.75,   4.85),
+    "fac_7":  (53.55,   9.99),
+    "fac_8":  (47.50,  19.04),
     # DC'ler
-    "dc_1":   (50.45,  30.52),   # Ukrayna (Kyiv)
-    "dc_2":   (52.23,  21.01),   # Polonya (Varşova)
-    "dc_3":   (44.43,  26.10),   # Romanya (Bükreş)
-    "dc_4":   (50.08,  14.44),   # Çekya (Prag)
-    "dc_5":   (47.50,  19.04),   # Macaristan (Budapeşte)
-    "dc_6":   (48.15,  17.11),   # Slovakya (Bratislava)
+    "dc_1":   (50.45,  30.52),
+    "dc_2":   (52.23,  21.01),
+    "dc_3":   (44.43,  26.10),
+    "dc_4":   (50.08,  14.44),
+    "dc_5":   (47.50,  19.04),
+    "dc_6":   (48.15,  17.11),
 }
 
 def haversine(lat1, lon1, lat2, lon2):
-    """İki koordinat arasındaki Haversine mesafesi (km)."""
+    
     R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi  = math.radians(lat2 - lat1)
@@ -101,21 +99,15 @@ def compute_distances():
 # =========================================================================
 # 3.  COĞRAFI TAŞIMA MODU FEASİBİLİTESİ
 # =========================================================================
-# Kara-kilitli tedarikçiler: Moskova(1), Berlin(2), Astana(4), Pekin(5),
-#                            Şanghay(8), Toronto(9), Kahire(10)
-# Deniz erişimli: Oslo(3), Mumbai(6), Dubai(7)
-# Kara-kilitli fabrikalar: Varşova(3), Ankara(4), Budapeşte(8)
-# Deniz erişimli: Madrid(1), St.Pete(2), Milano(5), Lyon(6), Hamburg(7)
-# Uzak kıta (mesafe > 5000 km) → karayolu yok
 
 FEASIBLE_MODES = {}
-SEA_SUPPLIERS  = {3, 6, 7}          # deniz erişimi olan tedarikçiler
-SEA_FACTORIES  = {1, 2, 5, 6, 7}    # deniz erişimi olan fabrikalar
+SEA_SUPPLIERS  = {3, 6, 7}
+SEA_FACTORIES  = {1, 2, 5, 6, 7}
 DIST_CACHE     = compute_distances()
 
 for i in SUPPLIERS:
     for j in FACTORIES:
-        modes = [1, 4]               # demiryolu + hava her zaman
+        modes = [1, 4]
         # Karayolu: mesafe ≤ 5000 km ise ekle
         if DIST_CACHE[(i, j)] <= 5000:
             modes.append(2)
