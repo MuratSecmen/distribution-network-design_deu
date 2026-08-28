@@ -269,9 +269,14 @@ def build_model(params):
         for l in DCS for n in PRODUCTS for p in [0]+PERIODS
     }
 
-    # b_bl[k,n,p] : müşteri k birikmiş talep, ürün n, dönem p sonu (p=0 başlangıç)
+    # b_bl[k,n,p] : müşteri k birikmiş talep, ürün n, dönem p sonu
+    # p=0 → ufkun başındaki birikim, sabit 0 (bkz. main.py'deki aynı
+    # düzeltmenin gerekçesi: serbest bırakılırsa solver "hayali geçmiş
+    # borç" uydurup hiç teslimat yapmadan/DC açmadan eq_8'i sağlayabilir).
     b_bl = {
-        (k,n,p): model.addVar(lb=0.0, name=f"b_{k}_{n}_{p}")
+        (k,n,p): model.addVar(
+            lb=0.0, ub=(0.0 if p == 0 else GRB.INFINITY),
+            name=f"b_{k}_{n}_{p}")
         for k in CUSTOMERS for n in PRODUCTS for p in [0]+PERIODS
     }
 

@@ -78,6 +78,14 @@ def load_parameters():
                               index_col=0, header=0)
     scalar  = df_scalar.iloc[:, 0].to_dict()
     big_M   = float(scalar.get("big_M", 1e6))
+    if "eta" not in scalar or pd.isna(scalar["eta"]):
+        raise ValueError(
+            "SCALAR_PARAMS sheet is missing 'eta' (minimum service level, "
+            "e.g. 0.95). Required by eq_21_service_level: without it the "
+            "model can satisfy demand entirely via backlog and never "
+            "actually deliver anything or open a DC."
+        )
+    eta = float(scalar["eta"])
 
     # ── Demand  d[k, n, p] ────────────────────────────────────────────────
     # Sheet layout: columns = [k, n, p, demand]
@@ -210,6 +218,7 @@ def load_parameters():
 
     return {
         "big_M":          big_M,
+        "eta":            eta,
         "demand":         demand,
         "trans_cost":     trans_cost,
         "factory_dc_cost":factory_dc_cost,
@@ -232,6 +241,7 @@ def load_parameters():
 # =========================================================================
 def build_model(params):
     M_big  = params["big_M"]
+    eta    = params["eta"]
     D      = params["demand"]           # d[k,n,p]
     c_S    = params["trans_cost"]       # c_S[i,j,m,n]
     c_F    = params["factory_dc_cost"]  # c_F[j,l,n,p]
@@ -295,9 +305,19 @@ def build_model(params):
     }
 
     # b_bl[k,n,p] : müşteri k'nın birikmiş talebi, ürün n, dönem p sonu
-    # p=0 → başlangıç birikimleri (serbest değişken)
+    # p=0 → ufkun BAŞINDAKİ birikim, sabit 0 (lb=ub=0). Serbest bırakılırsa
+    # (önceki sürümdeki hata) solver b_bl[k,n,0]'ı ufkun toplam talebi
+    # kadar "hayali geçmiş borç" olarak seçip eq_8'in muhasebe özdeşliğiyle
+    # bunu sıfıra indirebilir; bu da HİÇBİR teslimat yapılmadan (y=0) ve
+    # HİÇBİR DC açılmadan modelin "talep karşılandı" gibi görünmesine yol
+    # açar. b_bl[k,n,0]=0 sabitlemesi, ufka giren gerçek bir geçmiş borç
+    # verisi olmadığını (ki bu veri setinde yok) ifade eder ve talebin
+    # GERÇEKTEN teslim edilmesini (y>0, dolayısıyla açık bir DC) zorunlu
+    # kılar.
     b_bl = {
-        (k, n, p): model.addVar(lb=0.0, name=f"b_{k}_{n}_{p}")
+        (k, n, p): model.addVar(
+            lb=0.0, ub=(0.0 if p == 0 else GRB.INFINITY),
+            name=f"b_{k}_{n}_{p}")
         for k in CUSTOMERS
         for n in PRODUCTS
         for p in [0] + PERIODS
@@ -536,6 +556,24 @@ def build_model(params):
                 z[l, p] <= u[l],
                 name=f"eq10b_dc_invest_link_{l}_{p}"
             )
+
+    # ── Constraint eq_21 : Minimum hizmet düzeyi kısıtı ───────────────────
+    # Σ_l y[l,k,n,p] >= eta * d[k,n,p]
+    # b_bl[k,n,0]=0 sabitlemesi tek başına modelin talebi tamamen (dönemler
+    # boyunca artan) backlog'a yıkıp hiç teslimat yapmamasını ENGELLEMEZ —
+    # bu, veri setindeki backlog cezası DC yatırımından ucuzsa yine de
+    # matematiksel olarak "geçerli" (kazık değil, gerçek) bir optimal
+    # sonuç olabilir. eta, bunun bir iş kuralı olarak kabul edilemeyeceğini
+    # (müşterilere süresiz servis reddi olamayacağını) açıkça zorunlu kılar
+    # ve dolaylı olarak gerekli DC'lerin açılmasını (z, dolayısıyla u) tetikler.
+    for k in CUSTOMERS:
+        for n in PRODUCTS:
+            for p in PERIODS:
+                model.addConstr(
+                    gp.quicksum(y[l, k, n, p] for l in DCS)
+                    >= eta * D.get((k, n, p), 0.0),
+                    name=f"eq21_service_level_{k}_{n}_{p}"
+                )
 
     # ── Constraints eq_14 & eq_15 : Non-negativity & binary integrality ───
     # lb=0 değişken tanımında zaten uygulandı.
