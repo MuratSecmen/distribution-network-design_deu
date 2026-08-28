@@ -37,13 +37,13 @@ Planlama ufku:  4 dönem (takvim çeyrekleri)
 
 | Değişken | Açıklama |
 |----------|----------|
-| `x[i,j,m,p,r]` | Tedarikçi→Fabrika akışı (ürün r, mod m, dönem p) |
-| `w[j,l,m,p,r]` | Fabrika→DM akışı |
-| `y[l,k,m,p,r]` | DM→Müşteri akışı |
+| `x[i,j,m,p,r]` | Tedarikçi→Fabrika akışı (ürün r, mod m, dönem p) — çok modlu |
+| `w[j,l,p,r]` | Fabrika→DM akışı (mod ayrımı yok) |
+| `y[l,k,p,r]` | DM→Müşteri akışı (mod ayrımı yok) |
 | `q[l,p,r]` | DM'de dönem sonu envanter düzeyi |
 | `b[k,p,r]` | Müşteri k'nın karşılanamayan talebi (backlog) |
 | `z[l,p]` | DM l'nin dönem p'de açık olup olmadığı (binary) |
-| `u[l]` | DM l'ye yatırım yapılıp yapılmadığı (binary) |
+| `u[l]` | DM l'ye yatırım yapılıp yapılmadığı (binary, tek seferlik — dönem indeksi yok) |
 | `delta[l,p]` | DM açma/kapama geçiş değişkeni (switching) |
 
 ---
@@ -69,33 +69,49 @@ Min Z = Taşıma Maliyeti
 | 3 | Ağ büyüklüğü | 3T/2F/1DM/3M | 5T/4F/3DM/6M |
 | 4 | DM kararı | Sadece açık/kapalı | Yatırım + açık/kapalı |
 | 5 | Ulaşım modu | Kısıtsız | Coğrafi fizibilite filtreli |
-| 6 | Parametre mimarisi | Kısmen hardcoded | %100 Excel-driven |
+| 6 | Parametre mimarisi | Kısmen hardcoded | Maliyet/kapasite/talep parametreleri Excel-driven (küme tanımları ve mod-fizibilite tablosu kodda sabit) |
 | 7 | Dönem tanımı | Soyut | Takvim çeyrekleri |
 
 ---
 
 ## Veri Dosyaları
 
-Tüm parametreler Excel'den okunur. `main.py` içinde hiçbir sayısal değer hardcoded değildir.
+Maliyet/kapasite/talep parametrelerinin tamamı Excel'den okunur. Küme
+tanımları (tedarikçi/fabrika/DM/müşteri isimleri, ürün ve dönem sayısı) ve
+coğrafi taşıma-modu uygunluk tablosu (`FEASIBLE_MODES`) ise `main.py` /
+`main_v2.py` içinde sabit kodlu — bunlar Excel'den okunmaz.
 
-### `parameters.xlsx` — 9 Sayfa
+### `extended_model/data/parameters.xlsx` — `main.py` için, 14 Sayfa
 
 | Sayfa | İçerik |
 |-------|--------|
 | `SCALAR_PARAMS` | Big-M, MIP gap, zaman limiti |
-| `DEMAND` | Müşteri talebi (ürün × dönem) |
-| `PROD_COST` | Fabrika üretim maliyeti |
-| `FACTORY_CAP` | Fabrika kapasitesi |
-| `DC_CAP` | DM depolama kapasitesi |
-| `DC_INVEST` | DM yatırım maliyeti |
-| `DC_SWITCH` | DM açma/kapama maliyeti |
+| `DEMAND` | Müşteri talebi (müşteri × ürün × dönem) |
+| `SUPPLIER_CAP` | Tedarikçi kapasitesi |
+| `FACTORY_CAP` | Fabrika üretim kapasitesi |
+| `MODE_CAP` | Taşıma modu kapasitesi |
+| `DC_THROUGHPUT` | DM işlem (throughput) kapasitesi |
+| `DC_STORAGE` | DM depolama kapasitesi |
+| `DC_INVEST` | DM yatırım maliyeti (dönem 1'deki değer tek seferlik yatırım maliyeti olarak kullanılır) |
+| `DC_OPCOST` | DM değişken işletme maliyeti |
+| `DC_SWITCH` | DM açma/kapama geçiş maliyeti |
 | `HOLD_COST` | Birim envanter tutma maliyeti |
 | `BACK_COST` | Birim backlog ceza maliyeti |
+| `FACTORY_DC_COST` | Fabrika→DM birim taşıma maliyeti |
+| `DC_CUST_COST` | DM→Müşteri birim taşıma maliyeti |
 
-### `transportation_costs.xlsx`
+### `extended_model/data/transportation_costs.xlsx` — `main.py` için
 
-180 satırlık maliyet matrisi. Sütunlar: `i, j, l, k, mode, product, cost_per_unit`  
-Yalnızca coğrafi olarak fizibil `(düğüm, mod)` kombinasyonları içerir.
+`TRANS_COST` sayfası, sütunlar: `i, j, m, n, cost`. Yalnızca coğrafi olarak
+fizibil `(tedarikçi, fabrika, mod)` kombinasyonları içerir.
+
+### `parameters_v2.xlsx` / `transportation_costs_v2.xlsx` — `main_v2.py` için
+
+Genişletilmiş kardinaliteler (10T/8F/6DM/20M), Haversine tabanlı mesafe ve
+mod-faktörü ile hesaplanan taşıma maliyeti/emisyonu, fabrika açma/kapama
+kararı (`phi`/`gamma`), karbon emisyon bütçesi ve minimum hizmet düzeyi
+kısıtları için ek sayfalar (`FAC_INVEST`, `FAC_SWITCH`, `MODE_FACTORS`)
+içerir.
 
 ---
 
@@ -103,16 +119,22 @@ Yalnızca coğrafi olarak fizibil `(düğüm, mod)` kombinasyonları içerir.
 
 ### Gereksinimler
 ```bash
-pip install gurobipy pandas openpyxl
+pip install -r requirements.txt
 ```
 
 > Geçerli bir Gurobi lisansı gerekmektedir.  
 > Akademik lisans için: [gurobi.com/academia](https://www.gurobi.com/academia/academic-program-and-licenses/)
+>
+> `main_v2.py` (10T/8F/6DM/20M, 5 ürün, 12 dönem) boyutu, Gurobi'nin
+> size-limited (ücretsiz/kısıtlı) lisansının değişken sınırını aşar —
+> tam lisans gerektirir. `main.py` küçük ölçekli olduğu için kısıtlı
+> lisansla da çalışır.
 
 ### Çalıştırma
 ```bash
 cd extended_model
-python main.py
+python main.py       # temel genişletilmiş model (3T/4F/3DM/6M)
+python main_v2.py     # genişletilmiş kardinalite + emisyon/hizmet-düzeyi kısıtları
 ```
 
 ---
@@ -121,13 +143,16 @@ python main.py
 ```
 distribution-network-design_deu/
 ├── extended_model/
-│   ├── main.py                     
-│   ├── parameters.xlsx             
-│   └── transportation_costs.xlsx   
-├── results/
-│   ├── milp_solution.xlsx          
-│   └── optimal_solution.xlsx       
-├── LICENSE                         
+│   ├── main.py                        # temel genişletilmiş model
+│   ├── main_v2.py                     # genişletilmiş kardinalite + emisyon/hizmet-düzeyi
+│   ├── data/
+│   │   ├── parameters.xlsx            # main.py için
+│   │   ├── transportation_costs.xlsx  # main.py için
+│   │   ├── parameters_v2.xlsx         # main_v2.py için
+│   │   └── transportation_costs_v2.xlsx
+│   └── output/                        # çalıştırma çıktıları (git'e commit edilmez)
+├── requirements.txt
+├── LICENSE
 └── README.md
 ```
 
