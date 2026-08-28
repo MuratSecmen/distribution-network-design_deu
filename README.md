@@ -15,6 +15,11 @@
 
 Bu çalışma, çok dönemli çok ürünlü bir tedarik zinciri ağında **dağıtım merkezi yatırım kararları**, **açma/kapama kararları** ve **çok modlu ürün akış optimizasyonu**nu eş zamanlı ele alan bir MILP modeli sunmaktadır.
 
+Talep, isteğe bağlı olarak backlog'a devredilebilir; ancak her dönem
+talebin en az `eta` kadarının (örn. %95) fiilen teslim edilmesi zorunludur
+(minimum hizmet düzeyi kısıtı) — model, talebi süresiz biriktirip hiçbir
+DC açmadan/teslimat yapmadan "çözüm" üretemez.
+
 ### Ağ Yapısı
 ```
 [Tedarikçiler]     [Fabrikalar]    [Dağıtım Mrk.]    [Müşteriler]
@@ -41,7 +46,7 @@ Planlama ufku:  4 dönem (takvim çeyrekleri)
 | `w[j,l,p,r]` | Fabrika→DM akışı (mod ayrımı yok) |
 | `y[l,k,p,r]` | DM→Müşteri akışı (mod ayrımı yok) |
 | `q[l,p,r]` | DM'de dönem sonu envanter düzeyi |
-| `b[k,p,r]` | Müşteri k'nın karşılanamayan talebi (backlog) |
+| `b[k,p,r]` | Müşteri k'nın karşılanamayan talebi (backlog); `p=0` sabit 0 — ufka giren gerçek bir geçmiş borç verisi yok |
 | `z[l,p]` | DM l'nin dönem p'de açık olup olmadığı (binary) |
 | `u[l]` | DM l'ye yatırım yapılıp yapılmadığı (binary, tek seferlik — dönem indeksi yok) |
 | `delta[l,p]` | DM açma/kapama geçiş değişkeni (switching) |
@@ -85,7 +90,7 @@ coğrafi taşıma-modu uygunluk tablosu (`FEASIBLE_MODES`) ise `main.py` /
 
 | Sayfa | İçerik |
 |-------|--------|
-| `SCALAR_PARAMS` | Big-M, MIP gap, zaman limiti |
+| `SCALAR_PARAMS` | Big-M, MIP gap, zaman limiti, `eta` (min. hizmet düzeyi, örn. 0.95 — zorunlu) |
 | `DEMAND` | Müşteri talebi (müşteri × ürün × dönem) |
 | `SUPPLIER_CAP` | Tedarikçi kapasitesi |
 | `FACTORY_CAP` | Fabrika üretim kapasitesi |
