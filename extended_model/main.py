@@ -310,6 +310,15 @@ def build_model(params):
         for p in PERIODS
     }
 
+    # u[l] : DC l'ye yatırım yapıldı mı (binary, tek seferlik — dönem
+    # indeksi YOK). z[l,p] ile karıştırılmamalı: z dönemlik açık/kapalı
+    # operasyon durumu, u ise ufkun başında verilen tek seferlik sermaye
+    # yatırımı kararıdır (bkz. eq_10b bağlantı kısıtı ve amaç fonksiyonu).
+    u = {
+        l: model.addVar(vtype=GRB.BINARY, name=f"u_{l}")
+        for l in DCS
+    }
+
     # delta[l,p] : DC l dönem p'de statü değiştirdi mi (binary)
     delta = {
         (l, p): model.addVar(vtype=GRB.BINARY, name=f"delta_{l}_{p}")
@@ -323,7 +332,7 @@ def build_model(params):
     # 4b. OBJECTIVE FUNCTION  — LaTeX eq_1 ile birebir
     #
     # min Z = Σ c_S * x  +  Σ c_F * w  +  Σ c_D * y
-    #       + Σ (f*z + g*Σy)  +  Σ h*q  +  Σ beta*b  +  Σ sc*delta
+    #       + Σ f*u  +  Σ g*Σy  +  Σ h*q  +  Σ beta*b  +  Σ sc*delta
     # ─────────────────────────────────────────────────────────────────────
     obj = gp.LinExpr()
 
@@ -339,10 +348,15 @@ def build_model(params):
     for (l, k, n, p), var in y.items():
         obj += c_D.get((l, k, n, p), 0.0) * var
 
-    # DC sabit yatırım maliyeti  f[l,p] * z[l,p]
+    # DC sabit yatırım maliyeti  f[l,1] * u[l]  — TEK SEFERLİK.
+    # u[l]=1 <=> DC l'ye ufkun başında sermaye yatırımı yapılmış demektir;
+    # bu maliyet, DC'nin kaç dönem açık kaldığından bağımsız olarak sadece
+    # bir kez tahsil edilir (DC_INVEST sayfasındaki dönem-1 maliyeti
+    # kullanılır). Önceki sürümde bu terim f[l,p]*z[l,p] olarak HER
+    # dönem tekrar tekrar tahsil ediliyordu, ki bu "yatırım" değil
+    # "işletme gideri" anlamına geliyordu.
     for l in DCS:
-        for p in PERIODS:
-            obj += f_inv.get((l, p), 0.0) * z[l, p]
+        obj += f_inv.get((l, 1), 0.0) * u[l]
 
     # DC değişken işletme maliyeti  g[l,p] * Σ_{n,k} y[l,k,n,p]
     for l in DCS:
@@ -514,17 +528,27 @@ def build_model(params):
                 name=f"eq13_switch_close_{l}_{p}"
             )
 
+    # ── Constraint eq_10b : açık DC → yatırım bağı ────────────────────────
+    # z[l,p] <= u[l]   (yatırım yapılmamış bir DC hiçbir dönem açık olamaz)
+    for l in DCS:
+        for p in PERIODS:
+            model.addConstr(
+                z[l, p] <= u[l],
+                name=f"eq10b_dc_invest_link_{l}_{p}"
+            )
+
     # ── Constraints eq_14 & eq_15 : Non-negativity & binary integrality ───
     # lb=0 değişken tanımında zaten uygulandı.
     # Binary kısıtı vtype=GRB.BINARY ile uygulandı.
 
-    return model, x, w, y, q, b_bl, z, delta
+    model.update()  # NumConstrs/NumVars main()'de doğru basılsın diye
+    return model, x, w, y, q, b_bl, z, u, delta
 
 
 # =========================================================================
 # 5.  RESULTS EXTRACTION & EXCEL OUTPUT
 # =========================================================================
-def export_results(model, x, w, y, q, b_bl, z, delta, params):
+def export_results(model, x, w, y, q, b_bl, z, u, delta, params):
     status = model.Status
     if status not in (GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL):
         print(f"  [WARN] Model status = {status}. No feasible solution found.")
@@ -622,6 +646,15 @@ def export_results(model, x, w, y, q, b_bl, z, delta, params):
                 })
         pd.DataFrame(rows_z).to_excel(writer, sheet_name="z_DC_status", index=False)
 
+        # Sheet 6b: u – DC yatırım kararı (tek seferlik, dönemsiz)
+        rows_u = []
+        for l in DCS:
+            rows_u.append({
+                "DC":       DC_NAMES[l],
+                "Invested": int(u[l].X + 0.5),
+            })
+        pd.DataFrame(rows_u).to_excel(writer, sheet_name="u_DC_invest", index=False)
+
         # Sheet 7: delta – DC statü değişim olayları
         rows_d = []
         for l in DCS:
@@ -659,10 +692,12 @@ def export_results(model, x, w, y, q, b_bl, z, delta, params):
                 params["back_cost"].get((k, n, p), 0.0) * b_bl[k, n, p].X
                 for k in CUSTOMERS for n in PRODUCTS
             )
+            # DC yatırım maliyeti tek seferlik: sadece dönem 1'in
+            # satırında görünür (amaç fonksiyonuyla tutarlı kalması için).
             invest_p = sum(
-                params["dc_invest"].get((l, p), 0.0) * z[l, p].X
+                params["dc_invest"].get((l, 1), 0.0) * u[l].X
                 for l in DCS
-            )
+            ) if p == 1 else 0.0
             switch_p = sum(
                 params["dc_switch"].get(l, 0.0) * delta[l, p].X
                 for l in DCS
@@ -725,7 +760,7 @@ def main():
     params = load_parameters()
 
     print("\n  [INFO] Building model ...")
-    model, x, w, y, q, b_bl, z, delta = build_model(params)
+    model, x, w, y, q, b_bl, z, u, delta = build_model(params)
 
     print(f"  [INFO] Variables   : {model.NumVars:,}")
     print(f"  [INFO] Constraints : {model.NumConstrs:,}")
@@ -735,7 +770,7 @@ def main():
 
     model.optimize()
 
-    export_results(model, x, w, y, q, b_bl, z, delta, params)
+    export_results(model, x, w, y, q, b_bl, z, u, delta, params)
 
     print("\n  Done.\n")
 
