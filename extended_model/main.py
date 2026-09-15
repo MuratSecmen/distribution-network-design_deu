@@ -296,9 +296,21 @@ def build_model(params):
     }
 
     # q[l,n,p] : DC l'deki stok, ürün n, dönem p sonu
-    # p=0 → başlangıç stoku (serbest değişken, sıfıra zorlanmaz)
+    # p=0 → ufkun BAŞINDAKİ stok, sabit 0 (lb=ub=0). b_bl[k,n,0] ile aynı
+    # gerekçe: q[l,n,0] serbest bırakılırsa (önceki sürümdeki hata) solver
+    # bunu herhangi bir DC'ye "hayali başlangıç stoku" olarak atar — bu
+    # stok amaç fonksiyonundaki tutma maliyetine (yalnızca PERIODS üzerinden
+    # toplanır) ve eq_6 depo kapasitesine (aynı aralık) DAHİL DEĞİLDİR,
+    # yani sıfır maliyetli ve kapasitesiz bir kaynaktır. Sonuç: talep
+    # tedarikçi/fabrika ağı hiç kullanılmadan eq_5 muhasebe özdeşliğiyle
+    # "karşılanmış" görünür ve ağ tasarımı anlamsızlaşır. q[l,n,0]=0
+    # sabitlemesi, ufka giren gerçek bir başlangıç stoku verisi olmadığını
+    # (bu veri setinde yok) ifade eder ve her teslim edilen birimin
+    # gerçekten üretilip taşınmasını zorunlu kılar.
     q = {
-        (l, n, p): model.addVar(lb=0.0, name=f"q_{l}_{n}_{p}")
+        (l, n, p): model.addVar(
+            lb=0.0, ub=(0.0 if p == 0 else GRB.INFINITY),
+            name=f"q_{l}_{n}_{p}")
         for l in DCS
         for n in PRODUCTS
         for p in [0] + PERIODS

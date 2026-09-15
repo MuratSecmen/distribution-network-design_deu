@@ -263,9 +263,16 @@ def build_model(params):
         for n in PRODUCTS for p in PERIODS
     }
 
-    # q[l,n,p] : DC l stok seviyesi, ürün n, dönem p sonu (p=0 başlangıç)
+    # q[l,n,p] : DC l stok seviyesi, ürün n, dönem p sonu
+    # p=0 → ufkun başındaki stok, sabit 0 (bkz. main.py'deki aynı
+    # düzeltmenin gerekçesi ve b_bl[k,n,0] ile paralellik: serbest
+    # bırakılırsa solver, tutma maliyeti ve eq_6 kapasitesi dışında kalan
+    # sıfır maliyetli "hayali başlangıç stoku" uydurup tedarikçi/fabrika
+    # ağını hiç kullanmadan talebi karşılayabilir).
     q = {
-        (l,n,p): model.addVar(lb=0.0, name=f"q_{l}_{n}_{p}")
+        (l,n,p): model.addVar(
+            lb=0.0, ub=(0.0 if p == 0 else GRB.INFINITY),
+            name=f"q_{l}_{n}_{p}")
         for l in DCS for n in PRODUCTS for p in [0]+PERIODS
     }
 
